@@ -7,20 +7,16 @@ not nanoseconds. For JWTs, we use HS256 and sign with a secret from the
 environment.
 """
 
-import os
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from app.config import get_settings
 
 # CryptContext is passlib's password hashing abstraction. Using "bcrypt"
 # scheme means we hash with bcrypt and can verify against bcrypt hashes.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Read the JWT signing secret from the environment. In a real system this
-# would be a long random string stored in a secrets vault.
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRY_MINUTES = 60
+settings = get_settings()
 
 
 def hash_password(password: str) -> str:
@@ -39,7 +35,7 @@ def verify_password(plaintext: str, hashed: str) -> bool:
     return pwd_context.verify(plaintext, hashed)
 
 
-def create_access_token(user_id: int, role: str, expires_in_minutes: int = JWT_EXPIRY_MINUTES) -> str:
+def create_access_token(user_id: int, role: str, expires_in_minutes: int | None = None) -> str:
     """
     Create a JWT access token. The payload includes:
       - sub: the user ID (standard claim for "subject")
@@ -49,6 +45,8 @@ def create_access_token(user_id: int, role: str, expires_in_minutes: int = JWT_E
     The token is signed with HS256 using JWT_SECRET from the environment.
     """
     now = datetime.utcnow()
+    if expires_in_minutes is None:
+        expires_in_minutes = settings.jwt_expiry_minutes
     expires_at = now + timedelta(minutes=expires_in_minutes)
 
     payload = {
@@ -57,7 +55,7 @@ def create_access_token(user_id: int, role: str, expires_in_minutes: int = JWT_E
         "exp": expires_at,
     }
 
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def decode_access_token(token: str) -> dict:
@@ -70,7 +68,7 @@ def decode_access_token(token: str) -> dict:
     Returns the payload dict if valid.
     """
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return payload
     except JWTError:
         # We raise so the caller can catch and return 401.

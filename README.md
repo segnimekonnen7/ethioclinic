@@ -16,8 +16,10 @@ EthioClinic is a REST API for managing patient appointments and queues at a clin
 - **passlib + bcrypt**: Secure password hashing
 - **python-jose**: JWT token creation and verification
 - **pytest + httpx**: Comprehensive test suite
+- **Alembic**: Versioned database schema migrations
+- **GitHub Actions**: Automated test CI on push/PR
 
-## How to Run
+## Quick Start (Local Development)
 
 1. **Clone and set up environment:**
    ```bash
@@ -25,23 +27,78 @@ EthioClinic is a REST API for managing patient appointments and queues at a clin
    cp .env.example .env
    ```
 
-2. **Start all services:**
+2. **Install dependencies (for local run/tests):**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run database migrations (instead of create_all):**
+   ```bash
+   alembic upgrade head
+   ```
+
+4. **Start all services with Docker Compose:**
    ```bash
    docker compose up --build
    ```
 
    The API will be available at `http://localhost:8000`.
 
-3. **View OpenAPI docs:**
+5. **View OpenAPI docs:**
    ```
    http://localhost:8000/docs
    ```
 
-4. **Run tests:**
+6. **Run tests:**
    ```bash
-   pip install -r requirements.txt
    pytest -v
    ```
+
+## Configuration
+
+Environment variables are centralized in `app/config.py`.
+
+- `APP_ENV`: `development|test|staging|production`
+- `DATABASE_URL`: SQLAlchemy connection URL
+- `REDIS_URL`: Redis connection URL
+- `JWT_SECRET`: required secret key (must be strong in production)
+- `JWT_ALGORITHM`: JWT algorithm (`HS256` by default)
+- `JWT_EXPIRY_MINUTES`: token TTL in minutes
+- `CORS_ORIGINS`: comma-separated allowlist
+- `AUTH_RATE_LIMIT_PER_MINUTE`: per-IP signup/login limit
+- `LOG_LEVEL`: logging level (`INFO` by default)
+
+See `.env.example` for a complete template.
+
+## Production Hardening Highlights
+
+- **Typed settings and startup safety checks**: production startup fails for insecure JWT/CORS config.
+- **Schema migrations with Alembic**: startup no longer mutates schema automatically.
+- **Enum-based API contracts**: stricter role/status validation.
+- **Rate limiting on auth endpoints**: basic anti-abuse protection.
+- **Request ID middleware + structured logs**: easier tracing in production.
+- **Readiness/liveness split**: `health/live` and `health/ready`.
+
+## Migrations
+
+```bash
+# Create a new migration after model changes
+alembic revision --autogenerate -m "describe change"
+
+# Apply all migrations
+alembic upgrade head
+
+# Roll back one migration
+alembic downgrade -1
+```
+
+## CI
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+Runs on every push/PR:
+- dependency install
+- `pytest -v`
 
 ## Demo Script
 

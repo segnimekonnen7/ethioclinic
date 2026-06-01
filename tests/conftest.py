@@ -14,6 +14,8 @@ import fakeredis
 
 # Mock the environment before importing the app
 os.environ["JWT_SECRET"] = "test-secret"
+os.environ["APP_ENV"] = "test"
+os.environ["CORS_ORIGINS"] = "http://testserver"
 
 from app.db import Base, get_db
 from app.redis_client import get_redis

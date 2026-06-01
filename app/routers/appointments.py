@@ -188,10 +188,7 @@ def update_appointment(
 
     # Apply updates.
     if req.status:
-        try:
-            appointment.status = AppointmentStatus(req.status)
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+        appointment.status = req.status
 
     if req.slot_at:
         appointment.slot_at = req.slot_at
@@ -221,7 +218,7 @@ def update_appointment(
 def list_appointments(
     doctor_id: int = None,
     patient_id: int = None,
-    status: str = None,
+    status_filter: AppointmentStatus = None,
     current_user: User = Depends(require_role("admin", "receptionist")),
     db: Session = Depends(get_db),
 ):
@@ -234,10 +231,7 @@ def list_appointments(
         query = query.filter(Appointment.doctor_id == doctor_id)
     if patient_id:
         query = query.filter(Appointment.patient_id == patient_id)
-    if status:
-        try:
-            query = query.filter(Appointment.status == AppointmentStatus(status))
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+    if status_filter:
+        query = query.filter(Appointment.status == status_filter)
 
     return query.all()

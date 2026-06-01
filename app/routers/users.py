@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import User, Patient, Doctor
+from app.models import User, Patient, Doctor, Role
 from app.schemas import UserResponse, PromoteUserRequest, PatientCreateRequest, PatientResponse, DoctorCreateRequest, DoctorResponse
 from app.deps import get_current_user, require_role
 
@@ -42,15 +42,7 @@ def promote_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Convert the string role to the enum.
-    try:
-        from app.models import Role
-        user.role = Role(req.role)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role: {req.role}",
-        )
+    user.role = req.role
 
     db.commit()
     db.refresh(user)

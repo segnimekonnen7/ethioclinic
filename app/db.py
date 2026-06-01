@@ -7,22 +7,19 @@ Postgres; the 'Session' is one unit of work (one DB conversation) — we
 create one per request so transactions are cleanly scoped.
 """
 
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from app.config import get_settings
 
 # DATABASE_URL is read from the environment so we can point at a real
 # Postgres in Docker and at a throwaway SQLite in tests. 'postgresql+psycopg://'
 # tells SQLAlchemy to use the psycopg (v3) driver.
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5432/ethioclinic",
-)
+settings = get_settings()
 
 # pool_pre_ping=True means SQLAlchemy sends a quick "are you still there?"
 # ping before handing out a pooled connection. Prevents 'server closed
 # connection unexpectedly' errors when Postgres restarts.
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
+engine = create_engine(settings.database_url, pool_pre_ping=True, future=True)
 
 # sessionmaker() is a factory. Calling SessionLocal() returns a new Session.
 # autoflush=False stops SQLAlchemy from flushing writes on every query —

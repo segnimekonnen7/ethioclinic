@@ -10,14 +10,13 @@ For learning, we use a sync Redis client. In production, you'd use aioredis
 for async operations without blocking the event loop.
 """
 
-import os
 import redis
+from app.config import get_settings
 
-# Read Redis URL from the environment, defaulting to localhost.
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+settings = get_settings()
 
 # Create a sync Redis client. In production, this would be async (aioredis).
-client = redis.from_url(REDIS_URL, decode_responses=True)
+client = redis.from_url(settings.redis_url, decode_responses=True)
 
 
 def get_redis():

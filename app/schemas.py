@@ -9,7 +9,8 @@ so we can exclude sensitive fields like passwords from responses.
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
+from app.models import Role, AppointmentStatus
 
 
 # ==== Auth ====
@@ -38,7 +39,7 @@ class UserResponse(BaseModel):
     """User data returned to clients. Never includes password hash."""
     id: int
     email: str
-    role: str
+    role: Role
     created_at: datetime
 
     class Config:
@@ -47,7 +48,7 @@ class UserResponse(BaseModel):
 
 class PromoteUserRequest(BaseModel):
     """Request to change a user's role."""
-    role: str = Field(..., description="One of: admin, receptionist, doctor, patient")
+    role: Role = Field(..., description="One of: admin, receptionist, doctor, patient")
 
 
 # ==== Patient ====
@@ -105,8 +106,14 @@ class AppointmentCreateRequest(BaseModel):
 
 class AppointmentUpdateRequest(BaseModel):
     """Update appointment status or slot."""
-    status: Optional[str] = None
+    status: Optional[AppointmentStatus] = None
     slot_at: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def at_least_one_field(self):
+        if self.status is None and self.slot_at is None:
+            raise ValueError("At least one of status or slot_at is required")
+        return self
 
 
 class AppointmentResponse(BaseModel):
@@ -115,7 +122,7 @@ class AppointmentResponse(BaseModel):
     doctor_id: int
     patient_id: int
     slot_at: datetime
-    status: str
+    status: AppointmentStatus
     created_at: datetime
 
     class Config:

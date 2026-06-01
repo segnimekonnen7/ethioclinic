@@ -6,19 +6,23 @@ password and patient role by default. Login verifies the credentials and
 returns a JWT token.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import User, Role
 from app.schemas import SignupRequest, LoginRequest, AccessTokenResponse, UserResponse
 from app.security import hash_password, verify_password, create_access_token
+from app.rate_limit import limiter
+from app.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+settings = get_settings()
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(req: SignupRequest, db: Session = Depends(get_db)):
+@limiter.limit(lambda: f"{settings.auth_rate_limit_per_minute}/minute")
+def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
     """
     Create a new user account.
 
@@ -57,7 +61,8 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=AccessTokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit(lambda: f"{settings.auth_rate_limit_per_minute}/minute")
+def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     """
     Log in with email and password.
 
