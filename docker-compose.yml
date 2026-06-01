@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:16
+    container_name: ethioclinic-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ethioclinic
+    ports:
+      - "5432:5432"
+    volumes:
+      # Mount a volume so database persists across container restarts.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for the queue
+  redis:
+    image: redis:7-alpine
+    container_name: ethioclinic-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI application
+  api:
+    build: .
+    container_name: ethioclinic-api
+    ports:
+      - "8000:8000"
+    # Mount the source code so changes are picked up without rebuilding.
+    # In production you would NOT do this — the image would be self-contained.
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+    environment:
+      # Database connection (use the 'db' service name as the hostname).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/ethioclinic
+      # Redis connection (use the 'redis' service name as the hostname).
+      REDIS_URL: redis://redis:6379/0
+      # JWT secret (change this in production!).
+      JWT_SECRET: dev-secret-change-in-production
+    # Wait for db and redis to be healthy before starting the API.
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
